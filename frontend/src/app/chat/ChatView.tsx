@@ -1,78 +1,25 @@
+import { useEffect, useRef } from "react";
 import ChatBubble from "./ChatBubble";
 import ChatInput from "./ChatInput";
+import { useChat } from "../../hooks/useChat";
+import { useAuth } from "../../context/AuthContext";
 
 interface ChatViewProps {
   channelName: string;
+  channelId?: string;
   isDM?: boolean;
 }
 
-const mockMessages = [
-  {
-    sender: "Carlos Vela",
-    content: "¡Buenas tardes equipo! ¿Ya vieron la convocatoria para el partido del viernes? 🏟️",
-    time: "2:30 PM",
-    isOwn: false,
-    showSender: true,
-  },
-  {
-    sender: "Ana Torres",
-    content: "Sí, me parece excelente. Creo que tenemos buen equipo para este reto.",
-    time: "2:32 PM",
-    isOwn: false,
-    showSender: true,
-  },
-  {
-    sender: "Ana Torres",
-    content: "Les comparto el documento con la estrategia que preparé 📋",
-    time: "2:32 PM",
-    isOwn: false,
-    showSender: false,
-  },
-  {
-    sender: "Tú",
-    content: "¡Perfecto! Lo revisaré en un momento. También quería proponer que hagamos una reunión corta antes del partido.",
-    time: "2:35 PM",
-    isOwn: true,
-    showSender: true,
-  },
-  {
-    sender: "Lucía Méndez",
-    content: "De acuerdo, ¿a qué hora les funciona? Yo estoy libre después de las 5 ⚽",
-    time: "2:38 PM",
-    isOwn: false,
-    showSender: true,
-  },
-  {
-    sender: "Carlos Vela",
-    content: "Las 5:30 me parece bien. Yo creo que deberíamos descansar la delantera y reforzar el medio.",
-    time: "2:40 PM",
-    isOwn: false,
-    showSender: true,
-  },
-  {
-    sender: "Carlos Vela",
-    content: "¿Qué opinan? @Ana Torres tu que dices como mediocampista",
-    time: "2:40 PM",
-    isOwn: false,
-    showSender: false,
-  },
-  {
-    sender: "Tú",
-    content: "Concuerdo con Carlos, agendemos a las 5:30 entonces 👍",
-    time: "2:42 PM",
-    isOwn: true,
-    showSender: true,
-  },
-  {
-    sender: "Pedro Ramírez",
-    content: "¡Listo! Ahí estaré. Por cierto, ¿alguien completó las tareas de la semana? Vi que hay recompensas nuevas 🏆",
-    time: "2:45 PM",
-    isOwn: false,
-    showSender: true,
-  },
-];
+export default function ChatView({ channelName, channelId, isDM = false }: ChatViewProps) {
+  const { user } = useAuth();
+  const { messages, loading, typingUsers, sendMessage, sendTyping } = useChat(channelId || null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-export default function ChatView({ channelName, isDM = false }: ChatViewProps) {
+  // Auto-scroll on new messages
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Mensajes */}
@@ -100,25 +47,56 @@ export default function ChatView({ channelName, isDM = false }: ChatViewProps) {
           </p>
         </div>
 
-        {/* Fecha separador */}
-        <div className="flex items-center gap-3 px-4 my-4">
-          <div className="flex-1 h-px bg-base-300" />
-          <span className="text-xs font-medium text-base-content/30 bg-base-100 px-2">
-            Hoy
-          </span>
-          <div className="flex-1 h-px bg-base-300" />
-        </div>
+        {/* Loading */}
+        {loading && (
+          <div className="flex justify-center py-8">
+            <span className="loading loading-dots loading-md text-primary" />
+          </div>
+        )}
 
-        {/* Mensajes */}
+        {/* Fecha separador */}
+        {messages.length > 0 && (
+          <div className="flex items-center gap-3 px-4 my-4">
+            <div className="flex-1 h-px bg-base-300" />
+            <span className="text-xs font-medium text-base-content/30 bg-base-100 px-2">
+              Hoy
+            </span>
+            <div className="flex-1 h-px bg-base-300" />
+          </div>
+        )}
+
+        {/* Mensajes reales */}
         <div className="space-y-0.5 pb-2">
-          {mockMessages.map((msg, i) => (
-            <ChatBubble key={i} {...msg} />
-          ))}
+          {messages.map((msg, i) => {
+            const isOwn = msg.sender._id === user?._id;
+            const prevMsg = messages[i - 1];
+            const showSender = !prevMsg || prevMsg.sender._id !== msg.sender._id;
+            const time = new Date(msg.createdAt).toLocaleTimeString("es-MX", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            return (
+              <ChatBubble
+                key={msg._id}
+                sender={isOwn ? "Tú" : msg.sender.displayName}
+                content={msg.content}
+                time={time}
+                isOwn={isOwn}
+                showSender={showSender}
+              />
+            );
+          })}
+          <div ref={bottomRef} />
         </div>
       </div>
 
       {/* Input */}
-      <ChatInput channelName={channelName} />
+      <ChatInput
+        channelName={channelName}
+        onSend={sendMessage}
+        onTyping={sendTyping}
+        typingUsers={typingUsers}
+      />
     </div>
   );
 }

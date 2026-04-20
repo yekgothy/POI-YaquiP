@@ -1,11 +1,22 @@
 import TeamIcon from "../components/TeamIcon";
 import ChannelItem from "../components/ChannelItem";
 import UserAvatar from "../components/UserAvatar";
+import { useAuth } from "../../context/AuthContext";
+import { useOnlineUsers } from "../../hooks/useOnlineUsers";
+
+interface ApiChannel {
+  _id: string;
+  name: string;
+  type: "text" | "voice" | "video" | "dm";
+  team: string;
+  isDM: boolean;
+}
 
 interface SidebarProps {
   activeTeam: string;
   activeChannel: string;
   activeSection?: string;
+  channels?: ApiChannel[];
   onTeamChange: (team: string) => void;
   onChannelChange: (channel: string) => void;
   onDMsClick: () => void;
@@ -46,13 +57,20 @@ export default function Sidebar({
   activeTeam,
   activeChannel,
   activeSection = "chat",
+  channels: apiChannels,
   onTeamChange,
   onChannelChange,
   onDMsClick,
   onSectionChange,
   collapsed = false,
 }: SidebarProps) {
-  const channels = channelsByTeam[activeTeam] || [];
+  const { user, logout } = useAuth();
+  const { users: allUsers } = useOnlineUsers();
+
+  // Use API channels if available, otherwise fall back to mock
+  const sidebarChannels = apiChannels && apiChannels.length > 0
+    ? apiChannels.map((c) => ({ name: c.name, type: c.type as "text" | "voice" | "video" }))
+    : (channelsByTeam[activeTeam] || []);
 
   return (
     <div className="flex h-full">
@@ -177,7 +195,7 @@ export default function Sidebar({
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-base-content/40 px-2 mb-1">
                   Canales de texto
                 </p>
-                {channels
+                {sidebarChannels
                   .filter((c) => c.type === "text")
                   .map((ch) => (
                     <ChannelItem
@@ -185,7 +203,6 @@ export default function Sidebar({
                       name={ch.name}
                       type={ch.type}
                       active={activeChannel === ch.name}
-                      unread={ch.unread}
                       onClick={() => onChannelChange(ch.name)}
                     />
                   ))}
@@ -196,7 +213,7 @@ export default function Sidebar({
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-base-content/40 px-2 mb-1">
                   Canales de voz
                 </p>
-                {channels
+                {sidebarChannels
                   .filter((c) => c.type === "voice" || c.type === "video")
                   .map((ch) => (
                     <ChannelItem
@@ -204,7 +221,6 @@ export default function Sidebar({
                       name={ch.name}
                       type={ch.type}
                       active={activeChannel === ch.name}
-                      unread={ch.unread}
                       onClick={() => onChannelChange(ch.name)}
                     />
                   ))}
@@ -220,31 +236,31 @@ export default function Sidebar({
                   className="input input-sm input-bordered w-full bg-base-300/50"
                 />
               </div>
-              {[
-                { name: "Carlos Vela", online: true },
-                { name: "Ana Torres", online: true },
-                { name: "Miguel Herrera", online: false },
-                { name: "Lucía Méndez", online: true },
-                { name: "Roberto Díaz", online: false },
-              ].map((user) => (
-                <button
-                  key={user.name}
-                  onClick={() => onChannelChange(user.name)}
-                  className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors ${
-                    activeChannel === user.name
-                      ? "bg-primary/15 text-primary"
-                      : "hover:bg-base-300/50"
-                  }`}
-                >
-                  <UserAvatar name={user.name} size="sm" online={user.online} />
-                  <div className="text-left min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{user.name}</p>
-                    <p className="text-xs text-base-content/40 truncate">
-                      {user.online ? "En línea" : "Desconectado"}
-                    </p>
-                  </div>
-                </button>
-              ))}
+              {allUsers.length === 0 ? (
+                <p className="text-xs text-base-content/30 px-2 py-4 text-center">
+                  No hay otros usuarios registrados
+                </p>
+              ) : (
+                allUsers.map((u) => (
+                  <button
+                    key={u._id}
+                    onClick={() => onChannelChange(u.displayName)}
+                    className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors ${
+                      activeChannel === u.displayName
+                        ? "bg-primary/15 text-primary"
+                        : "hover:bg-base-300/50"
+                    }`}
+                  >
+                    <UserAvatar name={u.displayName} size="sm" online={u.online} />
+                    <div className="text-left min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{u.displayName}</p>
+                      <p className="text-xs text-base-content/40 truncate">
+                        {u.online ? "En línea" : "Desconectado"}
+                      </p>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           )}
 
@@ -254,9 +270,9 @@ export default function Sidebar({
               onClick={() => onSectionChange?.("profile")}
               className="flex items-center gap-2 flex-1 min-w-0 hover:bg-base-300/50 rounded-lg px-1 py-1 transition-colors"
             >
-              <UserAvatar name="Tú" size="sm" online={true} />
+              <UserAvatar name={user?.displayName || "Tú"} size="sm" online={true} />
               <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-semibold truncate">Usuario</p>
+                <p className="text-sm font-semibold truncate">{user?.displayName || "Usuario"}</p>
                 <p className="text-[10px] text-success">En línea</p>
               </div>
             </button>
@@ -271,6 +287,16 @@ export default function Sidebar({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
               </svg>
             </button>
+            <div className="tooltip tooltip-top" data-tip="Cerrar sesión">
+              <button
+                onClick={logout}
+                className="btn btn-ghost btn-xs btn-circle text-error/60 hover:text-error hover:bg-error/10"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       )}

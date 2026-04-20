@@ -2,20 +2,31 @@ import { useState } from "react";
 import AuthLayout from "./components/AuthLayout";
 import InputField from "./components/InputField";
 import SocialButton from "./components/SocialButton";
+import { useAuth } from "../context/AuthContext";
 
 interface LoginPageProps {
   onSwitchToRegister: () => void;
-  onLogin?: () => void;
 }
 
-export default function LoginPage({ onSwitchToRegister, onLogin }: LoginPageProps) {
+export default function LoginPage({ onSwitchToRegister }: LoginPageProps) {
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin?.();
+    setError("");
+    setSubmitting(true);
+    try {
+      await login(email, password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al iniciar sesión");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -67,6 +78,12 @@ export default function LoginPage({ onSwitchToRegister, onLogin }: LoginPageProp
 
             {/* Formulario */}
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              {error && (
+                <div className="alert alert-error text-sm py-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /></svg>
+                  <span>{error}</span>
+                </div>
+              )}
               <InputField
                 label="Correo electrónico"
                 type="email"
@@ -117,12 +134,19 @@ export default function LoginPage({ onSwitchToRegister, onLogin }: LoginPageProp
               {/* Botón principal */}
               <button
                 type="submit"
+                disabled={submitting}
                 className="btn btn-primary w-full mt-2 text-base font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
               >
-                Iniciar sesión
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                </svg>
+                {submitting ? (
+                  <span className="loading loading-spinner loading-sm" />
+                ) : (
+                  <>
+                    Iniciar sesión
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                    </svg>
+                  </>
+                )}
               </button>
             </form>
           </div>

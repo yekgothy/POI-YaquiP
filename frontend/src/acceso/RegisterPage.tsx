@@ -2,22 +2,44 @@ import { useState } from "react";
 import AuthLayout from "./components/AuthLayout";
 import InputField from "./components/InputField";
 import SocialButton from "./components/SocialButton";
+import { useAuth } from "../context/AuthContext";
 
 interface RegisterPageProps {
   onSwitchToLogin: () => void;
-  onRegister?: () => void;
 }
 
-export default function RegisterPage({ onSwitchToLogin, onRegister }: RegisterPageProps) {
+export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
+  const { register } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onRegister?.();
+    setError("");
+
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden");
+      return;
+    }
+    if (!acceptTerms) {
+      setError("Debes aceptar los términos y condiciones");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const username = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+      await register({ displayName: name, username, email, password });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al crear la cuenta");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -69,6 +91,12 @@ export default function RegisterPage({ onSwitchToLogin, onRegister }: RegisterPa
 
             {/* Formulario */}
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              {error && (
+                <div className="alert alert-error text-sm py-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /></svg>
+                  <span>{error}</span>
+                </div>
+              )}
               <InputField
                 label="Nombre completo"
                 type="text"
@@ -176,12 +204,19 @@ export default function RegisterPage({ onSwitchToLogin, onRegister }: RegisterPa
               {/* Botón principal */}
               <button
                 type="submit"
+                disabled={submitting}
                 className="btn btn-primary w-full mt-2 text-base font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
               >
-                Crear cuenta
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
-                </svg>
+                {submitting ? (
+                  <span className="loading loading-spinner loading-sm" />
+                ) : (
+                  <>
+                    Crear cuenta
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+                    </svg>
+                  </>
+                )}
               </button>
             </form>
           </div>

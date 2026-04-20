@@ -1,18 +1,32 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 interface ChatInputProps {
   channelName: string;
   onSend?: (message: string) => void;
+  onTyping?: () => void;
+  typingUsers?: string[];
 }
 
-export default function ChatInput({ channelName, onSend }: ChatInputProps) {
+export default function ChatInput({ channelName, onSend, onTyping, typingUsers = [] }: ChatInputProps) {
   const [message, setMessage] = useState("");
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim()) {
       onSend?.(message.trim());
       setMessage("");
+    }
+  };
+
+  const handleChange = (val: string) => {
+    setMessage(val);
+    // Throttle typing events
+    if (!typingTimer.current) {
+      onTyping?.();
+      typingTimer.current = setTimeout(() => {
+        typingTimer.current = null;
+      }, 2000);
     }
   };
 
@@ -33,7 +47,7 @@ export default function ChatInput({ channelName, onSend }: ChatInputProps) {
           {/* Input */}
           <textarea
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -74,9 +88,13 @@ export default function ChatInput({ channelName, onSend }: ChatInputProps) {
 
       {/* Indicador escribiendo */}
       <div className="h-5 flex items-center px-2">
-        <p className="text-[11px] text-base-content/30 animate-pulse">
-          Carlos Vela está escribiendo...
-        </p>
+        {typingUsers.length > 0 && (
+          <p className="text-[11px] text-base-content/30 animate-pulse">
+            {typingUsers.length === 1
+              ? `${typingUsers[0]} está escribiendo...`
+              : `${typingUsers.join(", ")} están escribiendo...`}
+          </p>
+        )}
       </div>
     </div>
   );

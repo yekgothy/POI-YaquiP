@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import MemberPanel from "./MemberPanel";
@@ -10,17 +10,52 @@ import TaskBoard from "../tareas/TaskBoard";
 import RewardsView from "../recompensas/RewardsView";
 import AdminPanel from "../admin/AdminPanel";
 import ProfilePage from "../perfil/ProfilePage";
+import { useAuth } from "../../context/AuthContext";
+import { api } from "../../lib/api";
+
+interface Channel {
+  _id: string;
+  name: string;
+  type: "text" | "voice" | "video" | "dm";
+  team: string;
+  isDM: boolean;
+}
 
 type View = "chat" | "voice-call" | "video-call";
 type Section = "chat" | "tasks" | "rewards" | "admin" | "profile";
 
 export default function MainLayout() {
+  const { token } = useAuth();
   const [activeTeam, setActiveTeam] = useState("mundial-2026");
   const [activeChannel, setActiveChannel] = useState("general");
+  const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
+  const [channels, setChannels] = useState<Channel[]>([]);
   const [showMembers, setShowMembers] = useState(true);
   const [currentView, setCurrentView] = useState<View>("chat");
   const [activeSection, setActiveSection] = useState<Section>("chat");
-  const [showIncoming, setShowIncoming] = useState(true);
+  const [showIncoming, setShowIncoming] = useState(false);
+
+  // Fetch channels when team changes
+  useEffect(() => {
+    if (!token || activeTeam === "dms") return;
+    api<Channel[]>(`/channels?team=${activeTeam}`, { token })
+      .then((data) => {
+        setChannels(data);
+        // Auto-select first text channel
+        const first = data.find((c) => c.type === "text");
+        if (first) {
+          setActiveChannel(first.name);
+          setActiveChannelId(first._id);
+        }
+      })
+      .catch(console.error);
+  }, [activeTeam, token]);
+
+  // Update channelId when activeChannel name changes
+  useEffect(() => {
+    const ch = channels.find((c) => c.name === activeChannel);
+    if (ch) setActiveChannelId(ch._id);
+  }, [activeChannel, channels]);
 
   const isDM = activeTeam === "dms";
 
@@ -53,6 +88,7 @@ export default function MainLayout() {
         activeTeam={activeTeam}
         activeChannel={activeChannel}
         activeSection={activeSection}
+        channels={channels}
         onTeamChange={handleTeamChange}
         onChannelChange={(ch) => {
           setActiveChannel(ch);
@@ -88,7 +124,7 @@ export default function MainLayout() {
             {activeSection === "chat" && (
               <>
                 {currentView === "chat" && (
-                  <ChatView channelName={activeChannel} isDM={isDM} />
+                  <ChatView channelName={activeChannel} channelId={activeChannelId || undefined} isDM={isDM} />
                 )}
                 {currentView === "voice-call" && (
                   <VoiceCall

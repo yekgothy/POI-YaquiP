@@ -1,24 +1,13 @@
 import MemberItem from "../components/MemberItem";
+import { useOnlineUsers } from "../../hooks/useOnlineUsers";
 
 interface MemberPanelProps {
   visible: boolean;
 }
 
-const members = {
-  online: [
-    { name: "Carlos Vela", role: "Capitán", online: true },
-    { name: "Ana Torres", role: "Mediocampista", online: true },
-    { name: "Lucía Méndez", role: "Delantera", online: true },
-    { name: "Pedro Ramírez", role: "Portero", online: true },
-  ],
-  offline: [
-    { name: "Miguel Herrera", role: "Director técnico", online: false },
-    { name: "Roberto Díaz", role: "Defensa", online: false },
-    { name: "Sandra López", role: "Mediocampista", online: false },
-  ],
-};
-
 export default function MemberPanel({ visible }: MemberPanelProps) {
+  const { onlineUsers, offlineUsers, loading } = useOnlineUsers();
+
   if (!visible) return null;
 
   return (
@@ -28,25 +17,46 @@ export default function MemberPanel({ visible }: MemberPanelProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-3">
-        {/* En línea */}
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-base-content/40 px-2 mb-1">
-            En línea — {members.online.length}
-          </p>
-          {members.online.map((m) => (
-            <MemberItem key={m.name} {...m} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <span className="loading loading-dots loading-sm text-primary" />
+          </div>
+        ) : (
+          <>
+            {/* En línea */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-base-content/40 px-2 mb-1">
+                En línea — {onlineUsers.length}
+              </p>
+              {onlineUsers.map((u) => (
+                <MemberItem
+                  key={u._id}
+                  name={u.displayName}
+                  avatar={u.avatar}
+                  online={true}
+                />
+              ))}
+              {onlineUsers.length === 0 && (
+                <p className="text-xs text-base-content/30 px-2">Nadie en línea</p>
+              )}
+            </div>
 
-        {/* Desconectados */}
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-base-content/40 px-2 mb-1">
-            Desconectados — {members.offline.length}
-          </p>
-          {members.offline.map((m) => (
-            <MemberItem key={m.name} {...m} />
-          ))}
-        </div>
+            {/* Desconectados */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-base-content/40 px-2 mb-1">
+                Desconectados — {offlineUsers.length}
+              </p>
+              {offlineUsers.map((u) => (
+                <MemberItem
+                  key={u._id}
+                  name={u.displayName}
+                  avatar={u.avatar}
+                  online={false}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
