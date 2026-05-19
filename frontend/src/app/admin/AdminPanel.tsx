@@ -1,219 +1,99 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AdminStats from "./AdminStats";
 import TaskManager from "./TaskManager";
 import TaskForm from "./TaskForm";
+import ServerSettings from "./ServerSettings";
 import type { AdminTask, TaskFormData } from "./types";
+import { api } from "../../lib/api";
+import { useAuth } from "../../context/AuthContext";
 
 type AdminView = "dashboard" | "create" | "edit";
 
-// Datos mock de tareas existentes
-const initialTasks: AdminTask[] = [
-  {
-    id: "1",
-    title: "Visita el Estadio Azteca",
-    description: "Dirígete al Estadio Azteca en la Ciudad de México y toma una foto frente a la entrada principal.",
-    type: "visit",
-    difficulty: "easy",
-    xp: 150,
-    status: "available",
-    location: "Estadio Azteca, CDMX",
-    badge: "🏟️",
-    category: "Sedes",
-    deadline: "Mar 15",
-    createdAt: "2026-01-15",
-    createdBy: "Admin",
-    active: true,
-    completedBy: 48,
-    totalParticipants: 120,
-  },
-  {
-    id: "2",
-    title: "Quiz: Historia de los Mundiales",
-    description: "Demuestra cuánto sabes sobre la historia de las Copas del Mundo. 10 preguntas, 15 minutos.",
-    type: "quiz",
-    difficulty: "medium",
-    xp: 300,
-    status: "available",
-    badge: "🧠",
-    category: "Conocimiento",
-    createdAt: "2026-01-20",
-    createdBy: "Admin",
-    active: true,
-    completedBy: 234,
-    totalParticipants: 412,
-  },
-  {
-    id: "3",
-    title: "Captura el mural mundialista",
-    description: "Encuentra y fotografía uno de los murales oficiales del Mundial 2026 en tu ciudad.",
-    type: "photo",
-    difficulty: "easy",
-    xp: 200,
-    status: "available",
-    location: "Cualquier mural oficial",
-    badge: "📸",
-    category: "Arte",
-    deadline: "Mar 20",
-    createdAt: "2026-01-22",
-    createdBy: "Admin",
-    active: true,
-    completedBy: 87,
-    totalParticipants: 195,
-  },
-  {
-    id: "4",
-    title: "¡Reúne a tu equipo!",
-    description: "Invita a 5 amigos a unirse a la plataforma y forma un equipo.",
-    type: "social",
-    difficulty: "medium",
-    xp: 500,
-    status: "available",
-    badge: "👥",
-    category: "Social",
-    createdAt: "2026-01-25",
-    createdBy: "Admin",
-    active: true,
-    completedBy: 31,
-    totalParticipants: 156,
-  },
-  {
-    id: "5",
-    title: "Maratón de sedes",
-    description: "Visita al menos 3 estadios sede del Mundial 2026 en México.",
-    type: "challenge",
-    difficulty: "legendary",
-    xp: 2000,
-    status: "available",
-    badge: "🏆",
-    category: "Desafíos",
-    deadline: "Jun 01",
-    createdAt: "2026-02-01",
-    createdBy: "Admin",
-    active: true,
-    completedBy: 5,
-    totalParticipants: 89,
-  },
-  {
-    id: "6",
-    title: "Receta mundialista",
-    description: "Prepara un platillo típico de alguno de los países participantes y sube una foto.",
-    type: "photo",
-    difficulty: "easy",
-    xp: 150,
-    status: "available",
-    badge: "🍽️",
-    category: "Gastronomía",
-    createdAt: "2026-02-05",
-    createdBy: "Admin",
-    active: false,
-    completedBy: 0,
-    totalParticipants: 0,
-  },
-  {
-    id: "7",
-    title: "Tour por el Estadio BBVA",
-    description: "Realiza el tour oficial del Estadio BBVA en Monterrey y comparte tu experiencia.",
-    type: "visit",
-    difficulty: "medium",
-    xp: 250,
-    status: "available",
-    location: "Estadio BBVA, Monterrey",
-    badge: "🏟️",
-    category: "Sedes",
-    deadline: "Abr 10",
-    createdAt: "2026-02-10",
-    createdBy: "Admin",
-    active: true,
-    completedBy: 22,
-    totalParticipants: 67,
-  },
-  {
-    id: "8",
-    title: "Quiz: Reglas del fútbol",
-    description: "¿Conoces todas las reglas del fútbol? Pon a prueba tu conocimiento con este quiz.",
-    type: "quiz",
-    difficulty: "hard",
-    xp: 400,
-    status: "available",
-    badge: "📋",
-    category: "Conocimiento",
-    createdAt: "2026-02-12",
-    createdBy: "Admin",
-    active: true,
-    completedBy: 67,
-    totalParticipants: 198,
-  },
-];
+interface AdminPanelProps {
+  serverId: string | null;
+  serverName: string;
+  serverDescription: string;
+  isServerAdmin: boolean;
+}
 
-export default function AdminPanel() {
-  const [tasks, setTasks] = useState<AdminTask[]>(initialTasks);
+export default function AdminPanel({
+  serverId,
+  serverName,
+  serverDescription,
+  isServerAdmin,
+}: AdminPanelProps) {
+  const { token } = useAuth();
+  const [localServerName, setLocalServerName] = useState(serverName);
+  const [localServerDescription, setLocalServerDescription] = useState(serverDescription);
+  const [tasks, setTasks] = useState<AdminTask[]>([]);
+  const [loading, setLoading] = useState(false);
   const [view, setView] = useState<AdminView>("dashboard");
   const [editingTask, setEditingTask] = useState<AdminTask | null>(null);
+
+  useEffect(() => {
+    if (!token || !serverId || !isServerAdmin) {
+      setTasks([]);
+      return;
+    }
+
+    setLoading(true);
+    api<AdminTask[]>(`/servers/${serverId}/admin/tasks`, { token })
+      .then(setTasks)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [token, serverId, isServerAdmin]);
+
+  useEffect(() => {
+    setLocalServerName(serverName);
+    setLocalServerDescription(serverDescription || "");
+  }, [serverName, serverDescription]);
 
   const activeTasks = tasks.filter((t) => t.active).length;
   const totalCompletions = tasks.reduce((sum, t) => sum + t.completedBy, 0);
   const totalParticipants = tasks.reduce((sum, t) => sum + t.totalParticipants, 0);
 
-  const handleCreate = (data: TaskFormData) => {
-    const newTask: AdminTask = {
-      id: String(Date.now()),
-      title: data.title,
-      description: data.description,
-      type: data.type,
-      difficulty: data.difficulty,
-      xp: data.xp,
-      status: data.active ? "available" : "locked",
-      location: data.location || undefined,
-      deadline: data.deadline || undefined,
-      badge: data.badge,
-      image: data.image || undefined,
-      category: data.category,
-      createdAt: new Date().toISOString().split("T")[0],
-      createdBy: "Admin",
-      active: data.active,
-      completedBy: 0,
-      totalParticipants: 0,
-    };
-    setTasks((prev) => [newTask, ...prev]);
+  const handleCreate = async (data: TaskFormData) => {
+    if (!token || !serverId) return;
+    const created = await api<AdminTask>(`/servers/${serverId}/admin/tasks`, {
+      token,
+      method: "POST",
+      body: data,
+    });
+    setTasks((prev) => [created, ...prev]);
     setView("dashboard");
   };
 
-  const handleEdit = (data: TaskFormData) => {
+  const handleEdit = async (data: TaskFormData) => {
     if (!editingTask) return;
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === editingTask.id
-          ? {
-              ...t,
-              title: data.title,
-              description: data.description,
-              type: data.type,
-              difficulty: data.difficulty,
-              xp: data.xp,
-              location: data.location || undefined,
-              deadline: data.deadline || undefined,
-              badge: data.badge,
-              image: data.image || undefined,
-              category: data.category,
-              active: data.active,
-              status: data.active ? "available" : "locked",
-            }
-          : t
-      )
-    );
+    if (!token || !serverId) return;
+    const updated = await api<AdminTask>(`/servers/${serverId}/admin/tasks/${editingTask.id}`, {
+      token,
+      method: "PUT",
+      body: data,
+    });
+    setTasks((prev) => prev.map((t) => (t.id === editingTask.id ? updated : t)));
     setEditingTask(null);
     setView("dashboard");
   };
 
-  const handleToggleActive = (taskId: string) => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === taskId ? { ...t, active: !t.active, status: t.active ? "locked" : "available" } : t
-      )
-    );
+  const handleToggleActive = async (taskId: string) => {
+    if (!token || !serverId) return;
+    const target = tasks.find((t) => t.id === taskId);
+    if (!target) return;
+    const updated = await api<AdminTask>(`/servers/${serverId}/admin/tasks/${taskId}/active`, {
+      token,
+      method: "PATCH",
+      body: { active: !target.active },
+    });
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
   };
 
-  const handleDelete = (taskId: string) => {
+  const handleDelete = async (taskId: string) => {
+    if (!token || !serverId) return;
+    await api<void>(`/servers/${serverId}/admin/tasks/${taskId}`, {
+      token,
+      method: "DELETE",
+    });
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
   };
 
@@ -221,6 +101,22 @@ export default function AdminPanel() {
     setEditingTask(task);
     setView("edit");
   };
+
+  if (!serverId) {
+    return (
+      <div className="h-full flex items-center justify-center p-8">
+        <p className="text-base-content/60">Selecciona un servidor para administrar tareas</p>
+      </div>
+    );
+  }
+
+  if (!isServerAdmin) {
+    return (
+      <div className="h-full flex items-center justify-center p-8">
+        <p className="text-base-content/60">Solo los administradores del servidor pueden crear tareas</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-y-auto bg-base-200/50">
@@ -238,7 +134,7 @@ export default function AdminPanel() {
                 <div>
                   <h1 className="text-2xl font-bold">Panel de Administración</h1>
                   <p className="text-sm text-base-content/50">
-                    Gestiona las tareas y misiones del Mundial 2026
+                    Gestiona las tareas del servidor: {localServerName || "Servidor"}
                   </p>
                 </div>
               </div>
@@ -259,6 +155,17 @@ export default function AdminPanel() {
               activeTasks={activeTasks}
               totalCompletions={totalCompletions}
               totalParticipants={totalParticipants}
+            />
+
+            {/* Gestión de servidor */}
+            <ServerSettings
+              serverId={serverId}
+              initialName={localServerName}
+              initialDescription={localServerDescription}
+              onServerUpdated={({ name, description }) => {
+                setLocalServerName(name);
+                setLocalServerDescription(description);
+              }}
             />
 
             {/* Tabla de tareas */}
@@ -282,6 +189,7 @@ export default function AdminPanel() {
             <div className="card bg-base-100 border border-base-300 shadow-sm">
               <div className="card-body">
                 <h2 className="card-title text-lg mb-3">Actividad reciente</h2>
+                {loading && <p className="text-sm text-base-content/50">Cargando actividad...</p>}
                 <div className="space-y-3">
                   {[
                     {

@@ -1,25 +1,276 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import UserProfileView from "./UserProfileView";
 import ProfileEditor from "./ProfileEditor";
 import SettingsView from "./SettingsView";
 import type { UserProfile, AppSettings } from "./types";
 import { defaultProfile, defaultSettings } from "./types";
+import { api, API_URL } from "../../lib/api";
+import { useAuth } from "../../context/AuthContext";
 
 type ProfileView = "profile" | "edit" | "settings";
 
-export default function ProfilePage() {
+interface ProfilePageProps {
+  serverId?: string | null;
+}
+
+interface ApiProfileOverview {
+  user: {
+    _id: string;
+    displayName: string;
+    username: string;
+    email: string;
+    avatar: string;
+    bio: string;
+    favoriteTeam: string;
+    country: string;
+    city: string;
+    online: boolean;
+    createdAt: string;
+  };
+  stats: {
+    level: number;
+    xp: number;
+    points: number;
+    tasksCompleted: number;
+    trophiesUnlocked: number;
+    rank: number;
+    xpToNext: number;
+  };
+}
+
+interface ApiProgressOverview {
+  server_id: string;
+  user_id: string;
+  xp: number;
+  points: number;
+  level: number;
+  tasks_completed: number;
+  current_streak: number;
+  max_streak: number;
+  last_task_at: string | null;
+}
+
+function useUserProgress(userId?: string, serverId?: string, token?: string) {
+  const [progress, setProgress] = useState<ApiProgressOverview | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!userId || !serverId || !token) {
+      setProgress(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    api<ApiProgressOverview>(`/user/progress?userId=${encodeURIComponent(userId)}&serverId=${encodeURIComponent(serverId)}`, {
+      token,
+    })
+      .then((data) => {
+        if (!cancelled) {
+          setProgress(data);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError("No se pudo cargar el progreso");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, serverId, token]);
+
+  return { progress, loading, error };
+}
+
+export default function ProfilePage({ serverId }: ProfilePageProps) {
+  const { user, token, updateCurrentUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile>(defaultProfile);
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [view, setView] = useState<ProfileView>("profile");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { progress, loading: progressLoading, error: progressError } = useUserProgress(
+    user?._id,
+    serverId || undefined,
+    token || undefined
+  );
 
-  const handleSaveProfile = (updates: Partial<UserProfile>) => {
-    setProfile((prev) => ({ ...prev, ...updates }));
-    setView("profile");
+  useEffect(() => {
+    if (!user) return;
+
+    setProfile((prev) => ({
+      ...prev,
+      id: user._id,
+      displayName: user.displayName,
+      username: user.username,
+      email: user.email,
+      bio: user.bio || "",
+      avatar: user.avatar || "",
+      favoriteTeam: user.favoriteTeam || "",
+      country: user.country || "",
+      city: user.city || "",
+      online: !!user.online,
+    }));
+  }, [user]);
+
+  useEffect(() => {
+    if (!progress) return;
+
+    setProfile((prev) => ({
+      ...prev,
+      level: progress.level,
+      xp: progress.xp,
+      tasksCompleted: progress.tasks_completed,
+      streak: progress.current_streak,
+    }));
+  }, [progress]);
+
+  useEffect(() => {
+    if (!token || !user?._id) return;
+
+    const query = serverId ? `?serverId=${encodeURIComponent(serverId)}` : "";
+    api<ApiProfileOverview>(`/users/${user._id}/profile${query}`, { token })
+      .then((overview) => {
+        setProfile((prev) => ({
+          ...prev,
+          id: overview.user._id,
+          displayName: overview.user.displayName,
+          username: overview.user.username,
+          email: overview.user.email,
+          bio: overview.user.bio || "",
+          avatar: overview.user.avatar || "",
+          favoriteTeam: overview.user.favoriteTeam || "",
+          country: overview.user.country || "",
+          city: overview.user.city || "",
+          joinedAt: overview.user.createdAt,
+          online: !!overview.user.online,
+          level: overview.stats.level,
+          xp: overview.stats.xp,
+          xpToNext: overview.stats.xpToNext,
+          tasksCompleted: overview.stats.tasksCompleted,
+          trophiesUnlocked: overview.stats.trophiesUnlocked,
+          rank: overview.stats.rank,
+        }));
+      })
+      .catch(() => {
+        // Non-blocking: keep local profile if stats request fails.
+      });
+  }, [token, user?._id, serverId]);
+
+  const handleSaveProfile = async (updates: Partial<UserProfile>) => {
+    if (!token) return;
+
+    setError(null);
+    setSaving(true);
+
+    try {
+      const payload = {
+        displayName: updates.displayName,
+        bio: updates.bio,
+        favoriteTeam: updates.favoriteTeam,
+        country: updates.country,
+        city: updates.city,
+        avatar: updates.avatar,
+      };
+
+      const saved = await api<{
+        _id: string;
+        displayName: string;
+        username: string;
+        email: string;
+        avatar: string;
+        bio: string;
+        favoriteTeam: string;
+        country: string;
+        city: string;
+        online: boolean;
+      }>("/users/profile", {
+        token,
+        method: "PUT",
+        body: payload,
+      });
+
+      setProfile((prev) => ({
+        ...prev,
+        displayName: saved.displayName,
+        username: saved.username,
+        email: saved.email,
+        bio: saved.bio || "",
+        favoriteTeam: saved.favoriteTeam || "",
+        country: saved.country || "",
+        city: saved.city || "",
+        avatar: saved.avatar || "",
+      }));
+
+      updateCurrentUser({
+        displayName: saved.displayName,
+        username: saved.username,
+        email: saved.email,
+        bio: saved.bio || "",
+        favoriteTeam: saved.favoriteTeam || "",
+        country: saved.country || "",
+        city: saved.city || "",
+        avatar: saved.avatar || "",
+      });
+
+      setView("profile");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo guardar el perfil");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUploadAvatar = async (file: File) => {
+    if (!token) return;
+
+    setError(null);
+    setSaving(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(`${API_URL}/uploads/avatar`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "No se pudo subir el avatar");
+      }
+
+      setProfile((prev) => ({
+        ...prev,
+        avatar: data.avatarUrl,
+      }));
+
+      updateCurrentUser({ avatar: data.avatarUrl });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo subir el avatar");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSaveSettings = (newSettings: AppSettings) => {
     setSettings(newSettings);
-    // Apply theme change
     if (newSettings.theme !== settings.theme) {
       document.documentElement.setAttribute("data-theme", newSettings.theme);
     }
@@ -28,6 +279,44 @@ export default function ProfilePage() {
   return (
     <div className="h-full overflow-y-auto bg-base-200/50">
       <div className="max-w-4xl mx-auto p-6">
+        {error && (
+          <div className="alert alert-error mb-4">
+            <span>{error}</span>
+          </div>
+        )}
+
+        {progressError && !error && (
+          <div className="alert alert-warning mb-4">
+            <span>{progressError}</span>
+          </div>
+        )}
+
+        {saving && (
+          <div className="alert alert-info mb-4 py-2">
+            <span>Guardando cambios...</span>
+          </div>
+        )}
+
+        {view === "profile" && (
+          <div className="mb-6 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm">
+              <div className="text-sm opacity-70">Nivel</div>
+              <div className="text-3xl font-bold text-primary">{profile.level}</div>
+            </div>
+            <div className="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm">
+              <div className="text-sm opacity-70">Racha actual</div>
+              <div className="text-3xl font-bold text-secondary">{profile.streak} días</div>
+              <div className="text-xs opacity-60">
+                {progressLoading ? "Cargando racha..." : progress ? `Máxima: ${progress.max_streak} días` : "Sin datos de backend"}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm">
+              <div className="text-sm opacity-70">Tareas completadas</div>
+              <div className="text-3xl font-bold text-accent">{profile.tasksCompleted}</div>
+            </div>
+          </div>
+        )}
+
         {/* Tabs de navegación */}
         {view === "profile" && (
           <div className="flex items-center gap-2 mb-6">
@@ -73,12 +362,15 @@ export default function ProfilePage() {
 
         {/* Content */}
         {view === "profile" && (
-          <UserProfileView profile={profile} onEdit={() => setView("edit")} />
+          <>
+            <UserProfileView profile={profile} onEdit={() => setView("edit")} />
+          </>
         )}
         {view === "edit" && (
           <ProfileEditor
             profile={profile}
             onSave={handleSaveProfile}
+            onUploadAvatar={handleUploadAvatar}
             onCancel={() => setView("profile")}
           />
         )}

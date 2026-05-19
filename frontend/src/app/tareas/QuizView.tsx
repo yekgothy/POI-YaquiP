@@ -87,7 +87,17 @@ export default function QuizView({
     return (
       <div className="h-full flex items-center justify-center p-6">
         <div className="text-center max-w-sm animate-[fadeInUp_0.5s_ease-out]">
-          <div className="text-6xl mb-4">{passed ? "🏆" : "😢"}</div>
+          <div className="mb-4 flex justify-center">
+            <span className={`w-14 h-14 rounded-full flex items-center justify-center ${passed ? "bg-success/15 text-success" : "bg-error/15 text-error"}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                {passed ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008ZM21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                )}
+              </svg>
+            </span>
+          </div>
           <h2 className="text-2xl font-extrabold mb-2">
             {passed ? "¡Felicidades!" : "¡Sigue intentando!"}
           </h2>
@@ -177,7 +187,12 @@ export default function QuizView({
       <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-xl mx-auto w-full">
         <div className="w-full animate-[fadeInUp_0.3s_ease-out]" key={current}>
           <div className="text-center mb-8">
-            <span className="text-4xl mb-4 block">🧠</span>
+            <p className="text-xs uppercase tracking-wider text-base-content/45 mb-2">{title}</p>
+            <span className="mb-4 flex justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-9 h-9 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.008v.008H12V18Zm0-12a4.5 4.5 0 0 0-4.5 4.5m4.5-4.5a4.5 4.5 0 0 1 4.5 4.5c0 1.8-1.04 3.07-2.46 3.86-.85.474-1.29 1.38-1.29 2.35v.29" />
+              </svg>
+            </span>
             <h2 className="text-xl font-bold text-base-content leading-relaxed">
               {question.question}
             </h2>
@@ -241,7 +256,7 @@ export default function QuizView({
             onClick={handleNext}
             className="btn btn-primary w-full font-bold text-base"
           >
-            {current + 1 >= questions.length ? "Ver resultados" : "Siguiente pregunta →"}
+            {current + 1 >= questions.length ? "Ver resultados" : "Siguiente pregunta"}
           </button>
         )}
       </div>

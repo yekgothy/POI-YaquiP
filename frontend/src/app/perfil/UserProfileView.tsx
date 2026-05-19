@@ -4,7 +4,7 @@ import { countryFlags } from "./types";
 
 interface UserProfileViewProps {
   profile: UserProfile;
-  onEdit: () => void;
+  onEdit?: () => void;
 }
 
 export default function UserProfileView({ profile, onEdit }: UserProfileViewProps) {
@@ -19,16 +19,21 @@ export default function UserProfileView({ profile, onEdit }: UserProfileViewProp
       {/* Banner + Avatar hero */}
       <div className="relative">
         {/* Banner */}
-        <div className="h-40 rounded-2xl bg-gradient-to-br from-primary/30 via-warning/20 to-secondary/30 overflow-hidden">
+        <div className="h-40 rounded-2xl bg-linear-to-br from-primary/30 via-warning/20 to-secondary/30 overflow-hidden">
           <div className="w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIi8+PC9zdmc+')] opacity-60" />
         </div>
 
         {/* Avatar */}
         <div className="absolute -bottom-10 left-6">
           <div className="relative">
-            <div className="absolute -inset-2 bg-gradient-to-br from-warning to-primary rounded-full opacity-40 blur-md" />
+            <div className="absolute -inset-2 bg-linear-to-br from-warning to-primary rounded-full opacity-40 blur-md" />
             <div className="relative ring-4 ring-base-100 rounded-full">
-              <UserAvatar name={profile.displayName} size="xl" online={profile.online} />
+              <UserAvatar
+                name={profile.displayName}
+                src={profile.avatar}
+                size="xl"
+                online={profile.online}
+              />
             </div>
             {/* Level badge */}
             <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-warning text-warning-content flex items-center justify-center text-sm font-extrabold ring-2 ring-base-100 shadow-lg">
@@ -38,15 +43,17 @@ export default function UserProfileView({ profile, onEdit }: UserProfileViewProp
         </div>
 
         {/* Edit button */}
-        <button
-          onClick={onEdit}
-          className="absolute top-3 right-3 btn btn-sm btn-ghost bg-base-100/80 backdrop-blur gap-1"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-          </svg>
-          Editar perfil
-        </button>
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            className="absolute top-3 right-3 btn btn-sm btn-ghost bg-base-100/80 backdrop-blur gap-1"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+            </svg>
+            Editar perfil
+          </button>
+        )}
       </div>
 
       {/* Profile info */}

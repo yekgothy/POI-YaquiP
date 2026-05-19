@@ -1,6 +1,5 @@
 const express = require("express");
-const Channel = require("../models/Channel");
-const Message = require("../models/Message");
+const db = require("../lib/db");
 const auth = require("../middleware/auth");
 
 const router = express.Router();
@@ -9,8 +8,7 @@ const router = express.Router();
 router.get("/", auth, async (req, res) => {
   try {
     const { team } = req.query;
-    const filter = team ? { team, isDM: false } : { isDM: false };
-    const channels = await Channel.find(filter).sort({ name: 1 });
+    const channels = await db.listChannels(team);
     res.json(channels);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -20,11 +18,18 @@ router.get("/", auth, async (req, res) => {
 // GET /api/channels/dms — List DM channels for current user
 router.get("/dms", auth, async (req, res) => {
   try {
-    const channels = await Channel.find({
-      isDM: true,
-      members: req.user._id,
-    }).populate("members", "displayName username online avatar");
+    const channels = await db.listDMChannelsForUser(req.user._id);
     res.json(channels);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/channels/unread-summary — unread counters for current user
+router.get("/unread-summary", auth, async (req, res) => {
+  try {
+    const summary = await db.getUnreadCountsForUser(req.user._id);
+    res.json(summary);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -36,21 +41,10 @@ router.post("/dm", auth, async (req, res) => {
     const { targetUserId } = req.body;
 
     // Check if DM already exists between these two users
-    let channel = await Channel.findOne({
-      isDM: true,
-      members: { $all: [req.user._id, targetUserId] },
-    }).populate("members", "displayName username online avatar");
+    let channel = await db.findExistingDMChannel(req.user._id, targetUserId);
 
     if (!channel) {
-      channel = new Channel({
-        name: "DM",
-        type: "dm",
-        team: "dms",
-        isDM: true,
-        members: [req.user._id, targetUserId],
-      });
-      await channel.save();
-      channel = await channel.populate("members", "displayName username online avatar");
+      channel = await db.createDMChannel(req.user._id, targetUserId);
     }
 
     res.json(channel);
@@ -64,21 +58,20 @@ router.get("/:id/messages", auth, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 50, 100);
     const before = req.query.before; // cursor-based pagination
-
-    const filter = { channel: req.params.id };
-    if (before) {
-      filter.createdAt = { $lt: new Date(before) };
-    }
-
-    const messages = await Message.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .populate("sender", "displayName username avatar online");
-
-    // Return in chronological order
-    res.json(messages.reverse());
+    const messages = await db.listMessages(req.params.id, limit, before);
+    res.json(messages);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/channels/:id/read — mark a channel as read
+router.post("/:id/read", auth, async (req, res) => {
+  try {
+    await db.markChannelRead(req.user._id, req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

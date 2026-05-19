@@ -1,4 +1,8 @@
-const API_URL = "http://localhost:4000/api";
+export const API_URL = "http://localhost:4000/api";
+
+export function getToken() {
+  return localStorage.getItem("token");
+}
 
 interface ApiOptions {
   method?: string;

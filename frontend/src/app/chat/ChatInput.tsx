@@ -3,13 +3,23 @@ import { useState, useRef } from "react";
 interface ChatInputProps {
   channelName: string;
   onSend?: (message: string) => void;
+  onUploadFile?: (file: File) => void;
+  uploading?: boolean;
   onTyping?: () => void;
   typingUsers?: string[];
 }
 
-export default function ChatInput({ channelName, onSend, onTyping, typingUsers = [] }: ChatInputProps) {
+export default function ChatInput({
+  channelName,
+  onSend,
+  onUploadFile,
+  uploading = false,
+  onTyping,
+  typingUsers = [],
+}: ChatInputProps) {
   const [message, setMessage] = useState("");
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,6 +27,17 @@ export default function ChatInput({ channelName, onSend, onTyping, typingUsers =
       onSend?.(message.trim());
       setMessage("");
     }
+  };
+
+  const handlePickFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    onUploadFile?.(file);
+    event.target.value = "";
   };
 
   const handleChange = (val: string) => {
@@ -37,12 +58,21 @@ export default function ChatInput({ channelName, onSend, onTyping, typingUsers =
           {/* Botón adjuntar */}
           <button
             type="button"
+            onClick={handlePickFile}
+            disabled={uploading}
             className="btn btn-ghost btn-sm btn-circle ml-1 mb-1 text-base-content/40 hover:text-primary"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
             </svg>
           </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={handleFileChange}
+          />
 
           {/* Input */}
           <textarea
@@ -88,7 +118,10 @@ export default function ChatInput({ channelName, onSend, onTyping, typingUsers =
 
       {/* Indicador escribiendo */}
       <div className="h-5 flex items-center px-2">
-        {typingUsers.length > 0 && (
+        {uploading && (
+          <p className="text-[11px] text-info animate-pulse">Subiendo archivo...</p>
+        )}
+        {!uploading && typingUsers.length > 0 && (
           <p className="text-[11px] text-base-content/30 animate-pulse">
             {typingUsers.length === 1
               ? `${typingUsers[0]} está escribiendo...`

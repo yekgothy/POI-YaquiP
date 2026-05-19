@@ -1,11 +1,11 @@
 import type { Task } from "./types";
 
 const typeConfig = {
-  visit: { emoji: "📍", label: "Visitar lugar", color: "badge-info" },
-  photo: { emoji: "📸", label: "Tomar foto", color: "badge-success" },
-  quiz: { emoji: "🧠", label: "Cuestionario", color: "badge-warning" },
-  social: { emoji: "🤝", label: "Social", color: "badge-secondary" },
-  challenge: { emoji: "🏆", label: "Desafío", color: "badge-error" },
+  visit: { label: "Visitar lugar", color: "badge-info" },
+  photo: { label: "Tomar foto", color: "badge-success" },
+  quiz: { label: "Cuestionario", color: "badge-warning" },
+  social: { label: "Social", color: "badge-secondary" },
+  challenge: { label: "Desafio", color: "badge-error" },
 };
 
 const difficultyConfig = {
@@ -44,7 +44,7 @@ export default function TaskCard({ task, onClick }: TaskCardProps) {
         {/* Header: tipo + dificultad */}
         <div className="flex items-center justify-between">
           <span className={`badge ${type.color} badge-sm gap-1 font-medium`}>
-            {type.emoji} {type.label}
+            {type.label}
           </span>
           <div className="flex items-center gap-0.5">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -119,7 +119,7 @@ export default function TaskCard({ task, onClick }: TaskCardProps) {
         {/* Footer: XP + deadline */}
         <div className="flex items-center justify-between pt-1 border-t border-base-300/50">
           <div className="flex items-center gap-1">
-            <span className="text-xs font-bold text-warning">⚡ {task.xp} XP</span>
+            <span className="text-xs font-bold text-warning">{task.xp} XP</span>
             {task.badge && <span className="text-sm">{task.badge}</span>}
           </div>
           {task.deadline && (

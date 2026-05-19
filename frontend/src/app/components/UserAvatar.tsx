@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 interface UserAvatarProps {
   name: string;
   src?: string;
@@ -46,12 +48,16 @@ export default function UserAvatar({
   online,
   className = "",
 }: UserAvatarProps) {
+  const [failed, setFailed] = useState(false);
+  const canRenderImage = !!src && !failed;
+
   return (
     <div className={`relative inline-flex shrink-0 ${className}`}>
-      {src ? (
+      {canRenderImage ? (
         <img
           src={src}
           alt={name}
+          onError={() => setFailed(true)}
           className={`${sizeMap[size]} rounded-full object-cover ring-2 ring-base-100`}
         />
       ) : (

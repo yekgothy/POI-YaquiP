@@ -1,7 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getSocket } from "../lib/socket";
-import { api } from "../lib/api";
+import { api, API_URL } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+
+interface ChatAttachment {
+  url: string;
+  path: string;
+  name: string;
+  size: number;
+  mimeType: string;
+}
 
 export interface ChatMessage {
   _id: string;
@@ -15,6 +23,7 @@ export interface ChatMessage {
   };
   channel: string;
   type: string;
+  attachment?: ChatAttachment | null;
   createdAt: string;
 }
 
@@ -23,6 +32,8 @@ export function useChat(channelId: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const typingTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const prevChannelRef = useRef<string | null>(null);
 
@@ -48,7 +59,11 @@ export function useChat(channelId: string | null) {
     if (prevChannelRef.current && prevChannelRef.current !== channelId) {
       socket.emit("channel:leave", prevChannelRef.current);
     }
-    socket.emit("channel:join", channelId);
+    socket.emit("channel:join", channelId, (response?: { ok?: boolean; error?: string }) => {
+      if (response?.ok === false && response.error) {
+        setSendError(response.error);
+      }
+    });
     prevChannelRef.current = channelId;
 
     const handleNewMessage = (msg: ChatMessage) => {
@@ -99,12 +114,57 @@ export function useChat(channelId: string | null) {
   }, [channelId]);
 
   const sendMessage = useCallback(
-    (content: string) => {
+    (content: string, type = "text", attachment: ChatAttachment | null = null) => {
       const socket = getSocket();
-      if (!socket || !channelId || !content.trim()) return;
-      socket.emit("message:send", { channelId, content });
+      if (!socket || !channelId) return;
+      if (!content.trim() && !attachment) return;
+      setSendError(null);
+      socket.emit(
+        "message:send",
+        { channelId, content, type, attachment },
+        (response?: { ok?: boolean; error?: string }) => {
+          if (response?.ok === false) {
+            setSendError(response.error || "No se pudo enviar el mensaje");
+          }
+        }
+      );
     },
     [channelId]
+  );
+
+  const uploadAndSendFile = useCallback(
+    async (file: File) => {
+      if (!token || !channelId) return;
+
+      setSendError(null);
+      setUploading(true);
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch(`${API_URL}/uploads/channel/${channelId}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "No se pudo subir el archivo");
+        }
+
+        sendMessage(data.suggestedText || file.name, data.suggestedType || "file", data.attachment);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Error al subir archivo";
+        setSendError(message);
+      } finally {
+        setUploading(false);
+      }
+    },
+    [channelId, token, sendMessage]
   );
 
   const sendTyping = useCallback(() => {
@@ -116,8 +176,11 @@ export function useChat(channelId: string | null) {
   return {
     messages,
     loading,
+    sendError,
+    uploading,
     typingUsers: Array.from(typingUsers.values()),
     sendMessage,
+    uploadAndSendFile,
     sendTyping,
   };
 }

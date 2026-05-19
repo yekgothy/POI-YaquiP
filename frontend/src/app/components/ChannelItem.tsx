@@ -45,7 +45,7 @@ export default function ChannelItem({
       </span>
       <span className="truncate flex-1 text-left">{name}</span>
       {unread > 0 && (
-        <span className="badge badge-primary badge-xs min-w-[18px]">{unread}</span>
+        <span className="badge badge-primary badge-xs min-w-4.5">{unread}</span>
       )}
     </button>
   );

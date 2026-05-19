@@ -1,24 +1,70 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ChatBubble from "./ChatBubble";
 import ChatInput from "./ChatInput";
 import { useChat } from "../../hooks/useChat";
 import { useAuth } from "../../context/AuthContext";
+import { useCall } from "../../context/CallContext";
+import { startCall } from "../../lib/callsApi";
+import { DailyCall } from "../calls/DailyCall";
 
 interface ChatViewProps {
   channelName: string;
   channelId?: string;
   isDM?: boolean;
+  targetUserId?: string;
 }
 
-export default function ChatView({ channelName, channelId, isDM = false }: ChatViewProps) {
+export default function ChatView({ channelName, channelId, isDM = false, targetUserId }: ChatViewProps) {
   const { user } = useAuth();
-  const { messages, loading, typingUsers, sendMessage, sendTyping } = useChat(channelId || null);
+  const { messages, loading, sendError, uploading, typingUsers, sendMessage, uploadAndSendFile, sendTyping } = useChat(
+    channelId || null
+  );
+  const { activeCall, initiateCall, startCall: startCallContext } = useCall();
+  const [isStartingCall, setIsStartingCall] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const handleStartCall = async () => {
+    try {
+      setIsStartingCall(true);
+      const callType = isDM ? "direct" : "group";
+      const response = await startCall(channelId, callType);
+
+      await startCallContext({
+        id: response.callId,
+        roomName: response.roomName,
+        callType,
+        channelId,
+      });
+
+      await initiateCall({
+        callId: response.callId,
+        roomName: response.roomName,
+        channelId,
+        targetUserId,
+        callType,
+      });
+    } catch (error) {
+      console.error("Error starting call:", error);
+      alert("Error al iniciar la llamada");
+    } finally {
+      setIsStartingCall(false);
+    }
+  };
+
+  // Show active call view
+  if (activeCall) {
+    return (
+      <DailyCall
+        callId={activeCall.id}
+        roomName={activeCall.roomName}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -37,14 +83,34 @@ export default function ChatView({ channelName, channelId, isDM = false }: ChatV
               </svg>
             )}
           </div>
-          <h2 className="text-2xl font-bold text-base-content">
-            {isDM ? channelName : `#${channelName}`}
-          </h2>
-          <p className="text-sm text-base-content/50 mt-1">
-            {isDM
-              ? `Este es el inicio de tu conversación con ${channelName}.`
-              : `¡Bienvenido a #${channelName}! Este es el inicio del canal.`}
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-base-content">
+                {isDM ? channelName : `#${channelName}`}
+              </h2>
+              <p className="text-sm text-base-content/50 mt-1">
+                {isDM
+                  ? `Este es el inicio de tu conversación con ${channelName}.`
+                  : `¡Bienvenido a #${channelName}! Este es el inicio del canal.`}
+              </p>
+            </div>
+            <button
+              onClick={handleStartCall}
+              disabled={isStartingCall}
+              className="btn btn-primary btn-sm gap-2 ml-4"
+              title={isDM ? "Iniciar videollamada" : "Iniciar videollamada grupal"}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M15.5 1h-8C6.12 1 5 2.12 5 3.5v17C5 21.88 6.12 23 7.5 23h8c1.38 0 2.5-1.12 2.5-2.5v-17C18 2.12 16.88 1 15.5 1zm-4 21c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm4.5-4H7V4h9v14z" />
+              </svg>
+              {isStartingCall ? "Iniciando..." : "Llamada"}
+            </button>
+          </div>
         </div>
 
         {/* Loading */}
@@ -79,7 +145,10 @@ export default function ChatView({ channelName, channelId, isDM = false }: ChatV
               <ChatBubble
                 key={msg._id}
                 sender={isOwn ? "Tú" : msg.sender.displayName}
+                avatar={msg.sender.avatar}
                 content={msg.content}
+                type={msg.type}
+                attachment={msg.attachment || null}
                 time={time}
                 isOwn={isOwn}
                 showSender={showSender}
@@ -91,9 +160,18 @@ export default function ChatView({ channelName, channelId, isDM = false }: ChatV
       </div>
 
       {/* Input */}
+      {sendError && (
+        <div className="px-4 pb-2">
+          <div className="alert alert-error py-2 min-h-0 text-sm">
+            <span>{sendError}</span>
+          </div>
+        </div>
+      )}
       <ChatInput
         channelName={channelName}
         onSend={sendMessage}
+        onUploadFile={uploadAndSendFile}
+        uploading={uploading}
         onTyping={sendTyping}
         typingUsers={typingUsers}
       />

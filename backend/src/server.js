@@ -2,12 +2,15 @@ require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const mongoose = require("mongoose");
 const cors = require("cors");
+const db = require("./lib/db");
 
 const authRoutes = require("./routes/auth");
 const channelRoutes = require("./routes/channels");
 const userRoutes = require("./routes/users");
+const serverRoutes = require("./routes/servers");
+const uploadRoutes = require("./routes/uploads");
+const callRoutes = require("./routes/calls");
 const setupSocket = require("./socket");
 const seedChannels = require("./seed");
 
@@ -30,6 +33,11 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/channels", channelRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/servers", serverRoutes);
+app.use("/api/uploads", uploadRoutes);
+app.use("/api/calls", callRoutes);
+const gamificationRoutes = require("./routes/gamification");
+app.use("/api/user", gamificationRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {
@@ -39,13 +47,13 @@ app.get("/api/health", (_req, res) => {
 // Socket.io
 setupSocket(io);
 
-// Connect to MongoDB and start server
+// Connect to Supabase and start server
 const PORT = process.env.PORT || 4000;
 
-mongoose
-  .connect(process.env.MONGODB_URI)
+db
+  .ping()
   .then(async () => {
-    console.log("📦 MongoDB connected");
+    console.log("📦 Supabase connected");
 
     // Seed default channels
     await seedChannels();
@@ -56,6 +64,6 @@ mongoose
     });
   })
   .catch((err) => {
-    console.error("❌ MongoDB connection error:", err.message);
+    console.error("❌ Supabase connection error:", err.message);
     process.exit(1);
   });

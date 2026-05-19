@@ -5,23 +5,68 @@ interface TaskDetailProps {
   task: Task;
   onBack: () => void;
   onStart?: () => void;
+  isSubmitting?: boolean;
 }
 
 const typeConfig = {
-  visit: { emoji: "📍", label: "Visitar lugar" },
-  photo: { emoji: "📸", label: "Tomar foto" },
-  quiz: { emoji: "🧠", label: "Cuestionario" },
-  social: { emoji: "🤝", label: "Social" },
-  challenge: { emoji: "🏆", label: "Desafío" },
+  visit: { label: "Visitar lugar" },
+  photo: { label: "Tomar foto" },
+  quiz: { label: "Cuestionario" },
+  social: { label: "Social" },
+  challenge: { label: "Desafio" },
 };
 
-export default function TaskDetail({ task, onBack, onStart }: TaskDetailProps) {
+function TaskTypeIcon({ type }: { type: Task["type"] }) {
+  if (type === "visit") {
+    return (
+      <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+      </svg>
+    );
+  }
+
+  if (type === "photo") {
+    return (
+      <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 7.5h10.5A2.25 2.25 0 0 1 19.5 9.75v6A2.25 2.25 0 0 1 17.25 18H6.75A2.25 2.25 0 0 1 4.5 15.75v-6A2.25 2.25 0 0 1 6.75 7.5Z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 7.5 10.5 6h3l.75 1.5" />
+        <circle cx="12" cy="12.75" r="2.25" />
+      </svg>
+    );
+  }
+
+  if (type === "quiz") {
+    return (
+      <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.008v.008H12V18Zm0-12a4.5 4.5 0 0 0-4.5 4.5m4.5-4.5a4.5 4.5 0 0 1 4.5 4.5c0 1.8-1.04 3.07-2.46 3.86-.85.474-1.29 1.38-1.29 2.35v.29" />
+      </svg>
+    );
+  }
+
+  if (type === "social") {
+    return (
+      <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372A9.337 9.337 0 0 0 21.75 18a9.337 9.337 0 0 0-4.125-1.5 9.38 9.38 0 0 0-2.625.372m0 2.256A9.37 9.37 0 0 1 12 19.5a9.37 9.37 0 0 1-3-.372m6 0a9.336 9.336 0 0 0-6 0m6-9a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9A2.25 2.25 0 0 1 5.25 16.5v-9A2.25 2.25 0 0 1 7.5 5.25h9A2.25 2.25 0 0 1 18.75 7.5v9A2.25 2.25 0 0 1 16.5 18.75Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m9 12 2.25 2.25L15 9.75" />
+    </svg>
+  );
+}
+
+export default function TaskDetail({ task, onBack, onStart, isSubmitting = false }: TaskDetailProps) {
   const type = typeConfig[task.type];
 
   return (
     <div className="h-full overflow-y-auto">
       {/* Hero header */}
-      <div className="relative bg-gradient-to-br from-primary/20 via-secondary/10 to-accent/10 px-6 pt-6 pb-10">
+      <div className="relative bg-linear-to-br from-primary/20 via-secondary/10 to-accent/10 px-6 pt-6 pb-10">
         <button
           onClick={onBack}
           className="btn btn-ghost btn-sm gap-1 mb-4"
@@ -34,7 +79,7 @@ export default function TaskDetail({ task, onBack, onStart }: TaskDetailProps) {
 
         <div className="flex items-start gap-4">
           <div className="w-16 h-16 rounded-2xl bg-base-100 shadow-lg flex items-center justify-center text-3xl shrink-0">
-            {type.emoji}
+            <TaskTypeIcon type={task.type} />
           </div>
           <div className="flex-1 min-w-0">
             <span className="badge badge-primary badge-sm mb-2">{type.label}</span>
@@ -52,7 +97,7 @@ export default function TaskDetail({ task, onBack, onStart }: TaskDetailProps) {
         {/* Stats cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-base-200 rounded-xl p-3 text-center">
-            <p className="text-2xl font-extrabold text-warning">⚡ {task.xp}</p>
+            <p className="text-2xl font-extrabold text-warning">{task.xp}</p>
             <p className="text-[11px] text-base-content/40 mt-0.5">XP Recompensa</p>
           </div>
           <div className="bg-base-200 rounded-xl p-3 text-center">
@@ -60,7 +105,7 @@ export default function TaskDetail({ task, onBack, onStart }: TaskDetailProps) {
             <p className="text-[11px] text-base-content/40 mt-0.5">Dificultad</p>
           </div>
           <div className="bg-base-200 rounded-xl p-3 text-center">
-            <p className="text-2xl font-extrabold text-info">{task.badge || "🎖️"}</p>
+            <p className="text-2xl font-extrabold text-info">{task.badge || "Insignia"}</p>
             <p className="text-[11px] text-base-content/40 mt-0.5">Recompensa</p>
           </div>
           <div className="bg-base-200 rounded-xl p-3 text-center">
@@ -82,7 +127,7 @@ export default function TaskDetail({ task, onBack, onStart }: TaskDetailProps) {
             <p className="text-sm text-base-content/60">{task.location}</p>
             {/* Placeholder del mapa */}
             <div className="mt-3 h-40 bg-base-300 rounded-lg flex items-center justify-center text-base-content/20">
-              <span className="text-sm">🗺️ Mapa del lugar</span>
+              <span className="text-sm">Mapa del lugar</span>
             </div>
           </div>
         )}
@@ -91,7 +136,7 @@ export default function TaskDetail({ task, onBack, onStart }: TaskDetailProps) {
         {task.type === "photo" && (
           <div className="bg-base-200 rounded-xl p-4">
             <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
-              📷 Instrucciones de la foto
+              Instrucciones de la foto
             </h3>
             <ul className="space-y-2 text-sm text-base-content/60">
               <li className="flex items-start gap-2">
@@ -123,7 +168,7 @@ export default function TaskDetail({ task, onBack, onStart }: TaskDetailProps) {
         {task.type === "quiz" && (
           <div className="bg-base-200 rounded-xl p-4">
             <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
-              🧠 Sobre el cuestionario
+              Sobre el cuestionario
             </h3>
             <div className="grid grid-cols-3 gap-3 text-center">
               <div className="bg-base-100 rounded-lg p-3">
@@ -160,13 +205,18 @@ export default function TaskDetail({ task, onBack, onStart }: TaskDetailProps) {
         </div>
 
         {/* Botón de acción */}
-        <div className="sticky bottom-0 pb-4 pt-2 bg-gradient-to-t from-base-100 via-base-100 to-transparent">
+        <div className="sticky bottom-0 pb-4 pt-2 bg-linear-to-t from-base-100 via-base-100 to-transparent">
           {task.status === "available" && (
             <button
               onClick={onStart}
+              disabled={isSubmitting}
               className="btn btn-primary w-full text-base font-bold shadow-lg shadow-primary/25 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
             >
-              🚀 Comenzar misión
+              {isSubmitting
+                ? "Guardando progreso..."
+                : task.type === "quiz"
+                ? "Comenzar cuestionario"
+                : "Marcar como completada"}
             </button>
           )}
           {task.status === "in-progress" && (
@@ -177,13 +227,12 @@ export default function TaskDetail({ task, onBack, onStart }: TaskDetailProps) {
                 max={100}
               />
               <button className="btn btn-primary w-full text-base font-bold">
-                {task.type === "quiz" ? "📝 Continuar cuestionario" : "📤 Enviar evidencia"}
+                {task.type === "quiz" ? "Continuar cuestionario" : "Enviar evidencia"}
               </button>
             </div>
           )}
           {task.status === "completed" && (
             <div className="text-center py-4">
-              <p className="text-4xl mb-2">🎉</p>
               <p className="font-bold text-success text-lg">¡Misión completada!</p>
               <p className="text-sm text-base-content/50">Ganaste {task.xp} XP y {task.badge}</p>
             </div>

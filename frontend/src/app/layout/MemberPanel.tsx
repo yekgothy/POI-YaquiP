@@ -3,10 +3,12 @@ import { useOnlineUsers } from "../../hooks/useOnlineUsers";
 
 interface MemberPanelProps {
   visible: boolean;
+  serverId?: string;
+  onViewProfile?: (userId: string) => void;
 }
 
-export default function MemberPanel({ visible }: MemberPanelProps) {
-  const { onlineUsers, offlineUsers, loading } = useOnlineUsers();
+export default function MemberPanel({ visible, serverId, onViewProfile }: MemberPanelProps) {
+  const { onlineUsers, offlineUsers, loading } = useOnlineUsers(serverId);
 
   if (!visible) return null;
 
@@ -34,6 +36,7 @@ export default function MemberPanel({ visible }: MemberPanelProps) {
                   name={u.displayName}
                   avatar={u.avatar}
                   online={true}
+                  onClick={() => onViewProfile?.(u._id)}
                 />
               ))}
               {onlineUsers.length === 0 && (
@@ -52,6 +55,7 @@ export default function MemberPanel({ visible }: MemberPanelProps) {
                   name={u.displayName}
                   avatar={u.avatar}
                   online={false}
+                  onClick={() => onViewProfile?.(u._id)}
                 />
               ))}
             </div>

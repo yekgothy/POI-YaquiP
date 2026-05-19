@@ -4,19 +4,42 @@ interface ChatBubbleProps {
   sender: string;
   avatar?: string;
   content: string;
+  type?: string;
+  attachment?: {
+    url: string;
+    path: string;
+    name: string;
+    size: number;
+    mimeType: string;
+  } | null;
   time: string;
   isOwn?: boolean;
   showSender?: boolean;
+}
+
+function extractFirstUrl(text: string) {
+  const match = String(text || "").match(/https?:\/\/[^\s]+/i);
+  return match ? match[0] : "";
+}
+
+function isImageUrl(url: string) {
+  return /\.(png|jpe?g|webp|gif|bmp|svg)(\?.*)?$/i.test(url);
 }
 
 export default function ChatBubble({
   sender,
   avatar,
   content,
+  type = "text",
+  attachment = null,
   time,
   isOwn = false,
   showSender = true,
 }: ChatBubbleProps) {
+  const showText = content && content.trim().length > 0;
+  const fallbackUrl = !attachment ? extractFirstUrl(content) : "";
+  const fallbackIsImage = !!fallbackUrl && isImageUrl(fallbackUrl);
+
   return (
     <div className={`flex gap-3 px-4 py-1 group hover:bg-base-200/50 transition-colors ${isOwn ? "" : ""}`}>
       {/* Avatar (solo si muestra sender) */}
@@ -36,9 +59,64 @@ export default function ChatBubble({
             <span className="text-[10px] text-base-content/30">{time}</span>
           </div>
         )}
-        <p className={`text-sm text-base-content/80 leading-relaxed ${!showSender ? "pl-0" : ""}`}>
-          {content}
-        </p>
+        {attachment && type === "image" && (
+          <a href={attachment.url} target="_blank" rel="noreferrer" className="block max-w-md mt-1">
+            <img
+              src={attachment.url}
+              alt={attachment.name}
+              className="rounded-xl border border-base-300 w-full object-cover max-h-80"
+            />
+          </a>
+        )}
+
+        {!attachment && type === "image" && fallbackUrl && (
+          <a href={fallbackUrl} target="_blank" rel="noreferrer" className="block max-w-md mt-1">
+            {fallbackIsImage ? (
+              <img
+                src={fallbackUrl}
+                alt="imagen"
+                className="rounded-xl border border-base-300 w-full object-cover max-h-80"
+              />
+            ) : (
+              <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-base-200 hover:bg-base-300 transition-colors">
+                <span>📎</span>
+                <span className="text-sm font-medium">Abrir archivo</span>
+              </span>
+            )}
+          </a>
+        )}
+
+        {attachment && type === "video" && (
+          <video
+            controls
+            className="rounded-xl border border-base-300 w-full max-w-md mt-1 max-h-80"
+            src={attachment.url}
+          />
+        )}
+
+        {attachment && type === "audio" && (
+          <audio controls className="mt-1 w-full max-w-md">
+            <source src={attachment.url} type={attachment.mimeType} />
+          </audio>
+        )}
+
+        {attachment && type === "file" && (
+          <a
+            href={attachment.url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-base-200 hover:bg-base-300 transition-colors"
+          >
+            <span>📎</span>
+            <span className="text-sm font-medium">{attachment.name}</span>
+          </a>
+        )}
+
+        {showText && (
+          <p className={`text-sm text-base-content/80 leading-relaxed ${!showSender ? "pl-0" : ""}`}>
+            {content}
+          </p>
+        )}
       </div>
 
       {/* Acciones hover */}

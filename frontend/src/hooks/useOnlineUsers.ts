@@ -11,7 +11,7 @@ export interface OnlineUser {
   online: boolean;
 }
 
-export function useOnlineUsers() {
+export function useOnlineUsers(serverId?: string) {
   const { token } = useAuth();
   const [users, setUsers] = useState<OnlineUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,11 +19,12 @@ export function useOnlineUsers() {
   // Fetch all users from API
   useEffect(() => {
     if (!token) return;
-    api<OnlineUser[]>("/users", { token })
+    const endpoint = serverId ? `/users?serverId=${serverId}` : "/users";
+    api<OnlineUser[]>(endpoint, { token })
       .then(setUsers)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, serverId]);
 
   // Listen for real-time online/offline events
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import UserAvatar from "../components/UserAvatar";
 import type { UserProfile, SocialLink } from "./types";
 import { countryFlags } from "./types";
@@ -6,10 +6,16 @@ import { countryFlags } from "./types";
 interface ProfileEditorProps {
   profile: UserProfile;
   onSave: (updates: Partial<UserProfile>) => void;
+  onUploadAvatar?: (file: File) => void;
   onCancel: () => void;
 }
 
-export default function ProfileEditor({ profile, onSave, onCancel }: ProfileEditorProps) {
+export default function ProfileEditor({
+  profile,
+  onSave,
+  onUploadAvatar,
+  onCancel,
+}: ProfileEditorProps) {
   const [displayName, setDisplayName] = useState(profile.displayName);
   const [username, setUsername] = useState(profile.username);
   const [bio, setBio] = useState(profile.bio);
@@ -19,6 +25,7 @@ export default function ProfileEditor({ profile, onSave, onCancel }: ProfileEdit
   const [city, setCity] = useState(profile.city);
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>(profile.socialLinks);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -63,6 +70,13 @@ export default function ProfileEditor({ profile, onSave, onCancel }: ProfileEdit
 
   const teams = Object.keys(countryFlags);
 
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    onUploadAvatar?.(file);
+    event.target.value = "";
+  };
+
   const platformLabels: Record<SocialLink["platform"], string> = {
     twitter: "X (Twitter)",
     instagram: "Instagram",
@@ -100,7 +114,7 @@ export default function ProfileEditor({ profile, onSave, onCancel }: ProfileEdit
         <div className="lg:col-span-2 space-y-5">
           {/* Avatar + Banner preview */}
           <div className="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
-            <div className="h-32 bg-gradient-to-br from-primary/30 via-warning/20 to-secondary/30 relative">
+            <div className="h-32 bg-linear-to-br from-primary/30 via-warning/20 to-secondary/30 relative">
               <button
                 type="button"
                 className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors group"
@@ -116,9 +130,10 @@ export default function ProfileEditor({ profile, onSave, onCancel }: ProfileEdit
             </div>
             <div className="px-4 pb-4 -mt-8">
               <div className="relative w-fit">
-                <UserAvatar name={displayName || "?"} size="xl" />
+                <UserAvatar name={displayName || "?"} src={profile.avatar} size="xl" />
                 <button
                   type="button"
+                  onClick={() => avatarInputRef.current?.click()}
                   className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/40 rounded-full transition-colors group"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white/0 group-hover:text-white/90 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -126,6 +141,13 @@ export default function ProfileEditor({ profile, onSave, onCancel }: ProfileEdit
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" />
                   </svg>
                 </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
               </div>
               <p className="text-xs text-base-content/40 mt-2">Haz clic para cambiar avatar o banner</p>
             </div>

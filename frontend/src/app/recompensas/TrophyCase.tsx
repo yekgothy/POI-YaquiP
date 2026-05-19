@@ -35,7 +35,10 @@ export default function TrophyCase({ trophies = defaultTrophies }: TrophyCasePro
       {/* Desbloqueados */}
       <div>
         <h3 className="text-sm font-bold text-base-content/60 uppercase tracking-wider mb-3 flex items-center gap-2">
-          🏆 Desbloqueados — {unlocked.length}
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v-1.5a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0-.75.75V6m9 0h1.5a1.5 1.5 0 0 1 1.5 1.5V9a4.5 4.5 0 0 1-4.5 4.5H15M7.5 6H6A1.5 1.5 0 0 0 4.5 7.5V9A4.5 4.5 0 0 0 9 13.5h.75m-.75 0V15A2.25 2.25 0 0 0 11.25 17.25h1.5A2.25 2.25 0 0 0 15 15v-1.5M9 21h6" />
+          </svg>
+          Desbloqueados — {unlocked.length}
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {unlocked.map((trophy) => {
@@ -63,7 +66,10 @@ export default function TrophyCase({ trophies = defaultTrophies }: TrophyCasePro
       {/* En progreso / Bloqueados */}
       <div>
         <h3 className="text-sm font-bold text-base-content/60 uppercase tracking-wider mb-3 flex items-center gap-2">
-          🔒 Por desbloquear — {locked.length}
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+          </svg>
+          Por desbloquear — {locked.length}
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {locked.map((trophy) => {

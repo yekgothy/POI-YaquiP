@@ -3,6 +3,8 @@ import LoginPage from "./acceso/LoginPage";
 import RegisterPage from "./acceso/RegisterPage";
 import MainLayout from "./app/layout/MainLayout";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { CallProvider } from "./context/CallContext";
+import { CallInvitation } from "./app/components/CallInvitation";
 
 type Page = "login" | "register";
 
@@ -19,7 +21,12 @@ function AppContent() {
   }
 
   if (user) {
-    return <MainLayout />;
+    return (
+      <CallProvider>
+        <MainLayout />
+        <CallInvitation />
+      </CallProvider>
+    );
   }
 
   return page === "login" ? (
