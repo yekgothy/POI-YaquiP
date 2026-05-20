@@ -1,6 +1,19 @@
 import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = "http://localhost:4000";
+const rawSocketBase =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API ||
+  (typeof window !== "undefined" ? window.location.origin : "https://localhost:5173");
+
+const pageProtocol = typeof window !== "undefined" ? window.location.protocol : "";
+const configuredSocketBase = String(rawSocketBase)
+  .trim()
+  .replace(/\/+$/, "")
+  .replace(/\/api$/, "");
+
+const SOCKET_URL = pageProtocol === "https:" && /^http:\/\//i.test(configuredSocketBase)
+  ? (typeof window !== "undefined" ? window.location.origin : "https://localhost:5173")
+  : configuredSocketBase;
 
 let socket: Socket | null = null;
 

@@ -241,9 +241,22 @@ export function useMediasoupCall({ callId }: UseMediasoupCallOptions) {
       joinedRef.current = true;
       setError(null);
 
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const hasAudioInput = devices.some((device) => device.kind === "audioinput");
-      const hasVideoInput = devices.some((device) => device.kind === "videoinput");
+      const mediaDevices = navigator.mediaDevices;
+      const canUseMediaDevices =
+        typeof window !== "undefined" &&
+        window.isSecureContext &&
+        !!mediaDevices &&
+        typeof mediaDevices.enumerateDevices === "function" &&
+        typeof mediaDevices.getUserMedia === "function";
+
+      let hasAudioInput = false;
+      let hasVideoInput = false;
+
+      if (canUseMediaDevices) {
+        const devices = await mediaDevices.enumerateDevices();
+        hasAudioInput = devices.some((device) => device.kind === "audioinput");
+        hasVideoInput = devices.some((device) => device.kind === "videoinput");
+      }
 
       const captureAttempts: Array<{ audio: boolean; video: boolean }> = [];
       if (hasAudioInput || hasVideoInput) {
@@ -260,28 +273,33 @@ export function useMediasoupCall({ callId }: UseMediasoupCallOptions) {
       let lastMediaError: any = null;
       let captureWarning: string | null = null;
 
-      for (const constraints of captureAttempts) {
-        try {
-          mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-          break;
-        } catch (mediaError: any) {
-          lastMediaError = mediaError;
+      if (canUseMediaDevices) {
+        for (const constraints of captureAttempts) {
+          try {
+            mediaStream = await mediaDevices.getUserMedia(constraints);
+            break;
+          } catch (mediaError: any) {
+            lastMediaError = mediaError;
 
-          if (mediaError?.name === "NotAllowedError") {
-            throw new Error("Permisos de camara/microfono denegados. Habilitalos y vuelve a intentar");
-          }
+            if (mediaError?.name === "NotAllowedError") {
+              throw new Error("Permisos de camara/microfono denegados. Habilitalos y vuelve a intentar");
+            }
 
-          const isRetryableError = ["NotFoundError", "NotReadableError", "AbortError", "OverconstrainedError", "TrackStartError"].includes(
-            mediaError?.name
-          );
-          if (!isRetryableError) {
-            throw mediaError;
+            const isRetryableError = ["NotFoundError", "NotReadableError", "AbortError", "OverconstrainedError", "TrackStartError"].includes(
+              mediaError?.name
+            );
+            if (!isRetryableError) {
+              throw mediaError;
+            }
           }
         }
       }
 
       if (!mediaStream) {
-        if (!hasAudioInput && !hasVideoInput) {
+        if (!canUseMediaDevices) {
+          captureWarning =
+            "Entraste en modo solo escucha: camara/microfono no disponibles en HTTP por IP. Usa HTTPS o localhost para habilitarlos";
+        } else if (!hasAudioInput && !hasVideoInput) {
           captureWarning = "Entraste en modo solo escucha: no se detecto microfono ni camara";
         } else if (lastMediaError?.name === "NotReadableError") {
           captureWarning = "Entraste en modo solo escucha: no se pudo iniciar el microfono/camara (posible uso por otra app)";

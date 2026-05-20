@@ -1,6 +1,4 @@
-import { getToken } from "./api";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+import { getToken, API_URL } from "./api";
 
 export interface CallResponse {
   ok: boolean;

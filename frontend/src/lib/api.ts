@@ -1,4 +1,19 @@
-export const API_URL = "http://localhost:4000/api";
+const rawApiBase =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API ||
+  "/api";
+
+const pageProtocol = typeof window !== "undefined" ? window.location.protocol : "";
+const configuredApiBase = String(rawApiBase).trim().replace(/\/+$/, "");
+
+let normalizedApiBase = configuredApiBase;
+if (pageProtocol === "https:" && /^http:\/\//i.test(configuredApiBase)) {
+  normalizedApiBase = "/api";
+}
+
+export const API_URL = normalizedApiBase.endsWith("/api")
+  ? normalizedApiBase
+  : `${normalizedApiBase}/api`;
 
 export function getToken() {
   return localStorage.getItem("token");
